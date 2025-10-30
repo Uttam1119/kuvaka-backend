@@ -100,3 +100,13 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "scoring failed" });
   }
 });
+
+// GET /results
+router.get("/results", (req, res) => {
+  if (!fs.existsSync(RESULTS_FILE))
+    return res
+      .status(404)
+      .json({ error: "no results found; run POST /score first" });
+  const results = JSON.parse(fs.readFileSync(RESULTS_FILE, "utf8"));
+  res.json(results);
+});
