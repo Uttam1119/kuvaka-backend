@@ -166,6 +166,79 @@ Downloads a CSV with all lead scores, intent, and reasoning.
 
 - Total lead score = `rule_score + AI_points`
 
+## Explanation of Rule Logic & Prompts Used
+
+### 1. Rule-Based Scoring Logic (Max 50 Points)
+
+The rule engine in `utils/rules.js` determines how relevant a lead is based on three key factors.
+
+| **Rule**               | **Description**                                                                                                                                                               | **Max Points** |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **Role Score**         | Senior or decision-making roles (e.g., “CEO”, “Head”, “Director”, “VP”) receive **20 points**. Influencer roles (e.g., “Manager”, “Lead”, “Marketing”) receive **10 points**. | 20             |
+| **Industry Score**     | If the lead’s industry matches any of the offer’s `ideal_use_cases`, assign **20 points**. If it’s a partial or adjacent match, assign **10 points**.                         | 20             |
+| **Completeness Score** | If all key fields (name, role, company, industry, location, LinkedIn bio) are filled, assign **10 points**. Otherwise, 0.                                                     | 10             |
+
+**Example Calculation:**
+
+| Role                | Industry                    | Completeness | Rule Score            |
+| ------------------- | --------------------------- | ------------ | --------------------- |
+| "Head of Marketing" | "Retail" (matches use case) | Complete     | 20 + 20 + 10 = **50** |
+
+---
+
+### 2. AI Intent Classification Logic (Max 50 Points)
+
+After computing rule scores, the system uses **Google Gemini (2.5 Flash)** to determine how interested the prospect seems in the offer.
+
+#### **Prompt Used**
+
+```text
+Offer: {offer JSON}
+Prospect: {lead JSON}
+Classify intent (High/Medium/Low) and explain in 1–2 sentences.
+```
+
+#### **Example Prompt**
+
+```text
+Offer: {"name":"CRM Pro","ideal_use_cases":["sales","retail"]}
+Prospect: {"name":"Alice","role":"Sales Director","industry":"Retail","linkedin_bio":"Leading sales teams across regions."}
+Classify intent (High/Medium/Low) and explain in 1–2 sentences.
+```
+
+#### **Sample Gemini Output**
+
+```
+Intent: High
+Reason: The prospect is a Sales Director in Retail, directly matching the offer’s target industry and role level.
+```
+
+#### **AI Intent → Points Mapping**
+
+| Intent | Points |
+| ------ | ------ |
+| High   | 50     |
+| Medium | 30     |
+| Low    | 10     |
+
+---
+
+### 3. Final Scoring Formula
+
+Each lead’s final score is calculated as:
+
+```
+final_score = rule_score + ai_points
+```
+
+Example:
+
+```
+rule_score = 40
+ai_intent = "High" → ai_points = 50
+final_score = 90
+```
+
 ---
 
 ## Notes
