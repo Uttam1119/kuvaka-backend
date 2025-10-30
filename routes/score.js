@@ -110,3 +110,33 @@ router.get("/results", (req, res) => {
   const results = JSON.parse(fs.readFileSync(RESULTS_FILE, "utf8"));
   res.json(results);
 });
+
+// GET /export (CSV)
+router.get("/export", (req, res) => {
+  if (!fs.existsSync(RESULTS_FILE))
+    return res
+      .status(404)
+      .json({ error: "no results found; run POST /score first" });
+  const results = JSON.parse(fs.readFileSync(RESULTS_FILE, "utf8"));
+  const header = "name,role,company,industry,intent,score,reasoning\n";
+  const rows = results
+    .map(
+      (r) =>
+        `${escapeCsv(r.name)},${escapeCsv(r.role)},${escapeCsv(
+          r.company
+        )},${escapeCsv(r.industry)},${r.intent},${r.score},${escapeCsv(
+          r.reasoning
+        )}`
+    )
+    .join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=results.csv");
+  res.send(header + rows);
+});
+
+function escapeCsv(s) {
+  if (s == null) return "";
+  return '"' + String(s).replace(/"/g, '""') + '"';
+}
+
+module.exports = router;
